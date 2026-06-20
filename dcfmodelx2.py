@@ -20,19 +20,26 @@ cash_flow = cash_flow.iloc[:, :4]
 #print(balance_sheet)
 #print(cash_flow.index)
 
-# Override controls
+# Override controls for full list
 
-start_override_g = 0.20
-end_override_g = 0.11
-opm_override_start = 0.35
-opm_override_end = 0.37
+growth_path_override = None
+opm_path_override = None
+da_path_override = None
+capex_path_override = None
+
+# Override controls for start/end
+
+start_override_g = None
+end_override_g = None
+opm_override_start = None
+opm_override_end = None
 da_override_start = None
-da_override_end = 0.055
-capex_override_start = 0.36
-capex_override_end = 0.25
+da_override_end = None
+capex_override_start = None
+capex_override_end = None
 nwc_override = None
 beta_override = None
-terminal_g_override = 0.03
+terminal_g_override = None
 
 # Revenue and Revenue Growth
 
@@ -113,9 +120,15 @@ nwc_assumption = nwc_override if nwc_override is not None else ciwc_avg
 
 default_terminal_g = 0.025
 terminal_g = terminal_g_override if terminal_g_override is not None else default_terminal_g
-start_g = start_override_g if start_override_g is not None else growth.iloc[-1]
-end_g = end_override_g if end_override_g is not None else terminal_g
-growth_path = np.linspace(start_g, end_g, years)
+
+
+if growth_path_override is not None:
+    assert len(growth_path_override) == years, "Growth path must have exactly 5 values"
+    growth_path = np.array(growth_path_override)
+else:
+    start_g = start_override_g if start_override_g is not None else growth.iloc[-1]
+    end_g = end_override_g if end_override_g is not None else terminal_g
+    growth_path = np.linspace(start_g, end_g, years)
 #print(growth_path)
 
 
@@ -129,21 +142,33 @@ for year in range(years):
 
 # OPM path
 
-opm_start = opm_override_start if opm_override_start is not None else opm_average
-opm_end = opm_override_end if opm_override_end is not None else opm_average
-opm_path = np.linspace(opm_start, opm_end, years)
+if opm_path_override is not None:
+    assert len(opm_path_override) == years, "OPM path must have exactly 5 values"
+    opm_path = np.array(opm_path_override)
+else:
+    opm_start = opm_override_start if opm_override_start is not None else opm_average
+    opm_end = opm_override_end if opm_override_end is not None else opm_average
+    opm_path = np.linspace(opm_start, opm_end, years)
 
 # Depreciation and Amortization path
 
-da_start = da_override_start if da_override_start is not None else d_and_a_avg
-da_end = da_override_end if da_override_end is not None else d_and_a_avg
-da_path = np.linspace(da_start, da_end, years)
+if da_path_override is not None:
+    assert len(da_path_override) == years, "D&A path must have exactly 5 values"
+    da_path = np.array(da_path_override)
+else:
+    da_start = da_override_start if da_override_start is not None else d_and_a_avg
+    da_end = da_override_end if da_override_end is not None else d_and_a_avg
+    da_path = np.linspace(da_start, da_end, years)
 
 # Capex path
 
-capex_start = capex_override_start if capex_override_start is not None else capex_avg
-capex_end = capex_override_end if capex_override_end is not None else capex_avg
-capex_path = np.linspace(capex_start, capex_end, years)
+if capex_path_override is not None:
+    assert len(capex_path_override) == years, "CAPEX path must have exactly 5 values"
+    capex_path = np.array(capex_path_override)
+else:
+    capex_start = capex_override_start if capex_override_start is not None else capex_avg
+    capex_end = capex_override_end if capex_override_end is not None else capex_avg
+    capex_path = np.linspace(capex_start, capex_end, years)
 
 # Assumptions used
 
