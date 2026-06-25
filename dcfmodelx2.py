@@ -22,10 +22,10 @@ cash_flow = cash_flow.iloc[:, :4]
 
 # Override controls for full list
 
-growth_path_override = None
-opm_path_override = None
-da_path_override = None
-capex_path_override = None
+growth_path_override = [0.17, 0.15, 0.13, 0.12, 0.11]
+opm_path_override = [0.46, 0.46, 0.465, 0.465, 0.47]
+da_path_override = [0.13, 0.14, 0.145, 0.145, 0.14]
+capex_path_override = [0.24, 0.23, 0.21, 0.19, 0.17]
 
 # Override controls for start/end
 
@@ -38,8 +38,10 @@ da_override_end = None
 capex_override_start = None
 capex_override_end = None
 nwc_override = None
-beta_override = None
-terminal_g_override = None
+tax_rate_override = None
+beta_override = 1.15
+terminal_g_override = 0.03
+erp_override = None
 
 # Revenue and Revenue Growth
 
@@ -59,7 +61,11 @@ opm_percent = opm.map(lambda x: f"{x:.2%}")
 
 # Tax Rate
 
-us_corporate_tax_rate = 0.21 # US Rate applied to all tickers. UK companies will be undertaxed by 4% if they pay main rate.
+tax_provision = income_statement.loc["Tax Provision"].sort_index()
+pretax_income = income_statement.loc["Pretax Income"].sort_index()
+effective_tax_rate = tax_provision.sum() / pretax_income.sum() 
+tax_rate = tax_rate_override if tax_rate_override is not None else effective_tax_rate
+
 # Would use effective tax rate, but companies like AMD gave rates ranging from -70% to 19%.
 
 # Depreciation and Amortization
@@ -105,7 +111,8 @@ summary = pd.DataFrame({
     "OPM": opm,
     "D&A %": d_and_a_revenue,
     "CAPEX %": capex_revenue,
-    "Change in WC %": ciwc_revenues
+    "Change in WC %": ciwc_revenues,
+    "Effective Tax Rate %": effective_tax_rate
 })
 summary.index = summary.index.year
 summary.loc["Average"] = summary.mean()
@@ -187,7 +194,7 @@ for year in range(years):
     ebit = current * opm_path[year]
     da_addback = current * da_path[year]
     capex_outflow = current * capex_path[year]
-    nopat = ebit * (1 - us_corporate_tax_rate)
+    nopat = ebit * (1 - tax_rate)
     delta_nwc = nwc_assumption * current
     ufcf = nopat + da_addback + delta_nwc - capex_outflow
     projected_ufcf.append(ufcf)
@@ -206,18 +213,23 @@ market_cap = info.get("marketCap", 0)
 
 ten_year_yield = yf.Ticker("^TNX").history(period="1d")["Close"].iloc[-1] / 100
 
-spx = yf.Ticker("^SP500TR").history(period="20y")["Close"]
-market_return = (spx.iloc[-1] / spx.iloc[0]) ** (1/20) - 1
+##spx = yf.Ticker("^SP500TR").history(period="20y")["Close"]
+##market_return = (spx.iloc[-1] / spx.iloc[0]) ** (1/20) - 1
+
+defualt_erp = 0.0446 # Damodarans equity risk premium for united states 2026
+equity_risk_permium = erp_override if erp_override is not None else defualt_erp
 
 total_debt = balance_sheet.loc["Total Debt"].sort_index().iloc[-1]
 
 interest_expense = abs(income_statement.loc["Interest Expense"].sort_index().iloc[-1])
 
+print(equity_risk_permium)
+
 # WACC calc
 
-cost_of_equity = ten_year_yield + beta * (market_return - ten_year_yield)
+cost_of_equity = ten_year_yield + beta * equity_risk_permium
 cost_of_debt_pretax = interest_expense / total_debt
-cost_of_debt_aftertax = cost_of_debt_pretax * (1 - us_corporate_tax_rate)
+cost_of_debt_aftertax = cost_of_debt_pretax * (1 - tax_rate)
 equity_weight = market_cap / (market_cap + total_debt)
 debt_weight = total_debt / (market_cap + total_debt)
 wacc = (cost_of_equity * equity_weight) + (cost_of_debt_aftertax * debt_weight)
@@ -242,7 +254,7 @@ terminal_value_pv = terminal_value * (1 / (1 + wacc) ** years)
 enterprise_value = sum(discounted_ufcf) + terminal_value_pv
 
 
-cash_and_equivalents = balance_sheet.loc["Cash And Cash Equivalents"].sort_index().iloc[-1]
+cash_and_equivalents = balance_sheet.loc["Cash Cash Equivalents And Short Term Investments"].sort_index().iloc[-1]
 shares_outstanding = stock.info.get("sharesOutstanding")
 equity_value = enterprise_value + cash_and_equivalents - total_debt
 
