@@ -46,7 +46,7 @@ da_override_end = None
 capex_override_start = None
 capex_override_end = None
 nwc_override = None
-tax_rate_override = None
+tax_rate_override =None
 beta_override = None
 terminal_g_override = None
 erp_override = None
@@ -220,7 +220,7 @@ market_cap = info.get("marketCap", 0)
 ten_year_yield = yf.Ticker("^TNX").history(period="1d")["Close"].iloc[-1] / 100
 
 
-default_erp = 0.0446 # Damodarans equity risk premium for united states 2026
+default_erp = 0.0445 # Damodarans equity risk premium for united states 2026
 equity_risk_premium = erp_override if erp_override is not None else default_erp
 
 total_debt = balance_sheet.loc["Total Debt"].sort_index().iloc[-1]
